@@ -13,7 +13,7 @@ def load_env(path=DEFAULT_ENV):
     if not path.exists():
         return
     values = {}
-    for number, line in enumerate(path.read_text(encoding='utf-8').splitlines(), 1):
+    for number, line in enumerate(path.read_text(encoding='utf-8-sig').splitlines(), 1):
         line = line.strip()
         if not line or line.startswith('#'):
             continue

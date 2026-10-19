@@ -10,6 +10,8 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 
 from config import DEFAULT_ENV, load_env
+from kubernetes_access import connect_cluster, list_clusters, list_contexts, list_subscriptions, tool_environment
+from urllib.parse import parse_qs, urlsplit
 
 ROOT = Path(__file__).resolve().parent
 
@@ -23,7 +25,7 @@ def run_scan(data):
     if not isinstance(data.get('inventory_only', False), bool):
         raise ValueError('inventory_only must be boolean')
     with tempfile.TemporaryDirectory(prefix='image-reporter-') as directory:
-        command = [sys.executable, str(ROOT / 'eol_reporter.py')]
+        command = [sys.executable, '-X', 'utf8', str(ROOT / 'eol_reporter.py')]
         for name in ('context', 'namespace'):
             if data.get(name):
                 command.append(f'--{name}={data[name]}')
@@ -34,7 +36,8 @@ def run_scan(data):
                 command += [flag, str(path)]
         if data.get('inventory_only'):
             command.append('--inventory-only')
-        result = subprocess.run(command, capture_output=True, text=True, timeout=600, cwd=ROOT)
+        result = subprocess.run(command, capture_output=True, text=True, encoding='utf-8',
+                                timeout=600, cwd=ROOT, env=tool_environment())
         if result.returncode:
             raise ValueError(result.stderr.strip() or 'Scan failed')
         return json.loads(result.stdout)
@@ -61,21 +64,42 @@ class Handler(BaseHTTPRequestHandler):
         if not self.valid_host():
             return self.respond(403, b'{"error":"Invalid host"}')
         if self.path == '/':
-            html = (ROOT / 'ui.html').read_text().replace('__CSRF_TOKEN__', self.server.csrf_token)
+            html = (ROOT / 'ui.html').read_text(encoding='utf-8').replace('__CSRF_TOKEN__', self.server.csrf_token)
             return self.respond(200, html.encode(), 'text/html')
+        path = urlsplit(self.path)
+        if path.path in ('/api/contexts', '/api/subscriptions', '/api/clusters'):
+            if self.headers.get('X-CSRF-Token') != self.server.csrf_token:
+                return self.respond(403, b'{"error":"Invalid request token"}')
+            try:
+                if path.path == '/api/contexts':
+                    result = list_contexts()
+                elif path.path == '/api/subscriptions':
+                    result = {'subscriptions': list_subscriptions()}
+                else:
+                    subscription = parse_qs(path.query).get('subscription', [''])[0]
+                    if not subscription or subscription.startswith('-'):
+                        raise ValueError('Select an Azure subscription')
+                    result = {'clusters': list_clusters(subscription)}
+                return self.respond(200, json.dumps(result).encode('utf-8'))
+            except (ValueError, OSError) as error:
+                return self.respond(400, json.dumps({'error': str(error)}).encode('utf-8'))
         self.respond(404, b'{"error":"Not found"}')
 
     def do_POST(self):
         if (not self.valid_host() or
                 self.headers.get('X-CSRF-Token') != self.server.csrf_token):
             return self.respond(403, b'{"error":"Invalid request token"}')
-        if self.path != '/api/scan':
+        if self.path not in ('/api/scan', '/api/connect'):
             return self.respond(404, b'{"error":"Not found"}')
         try:
             size = int(self.headers.get('Content-Length', '0'))
             if size < 1 or size > 2_000_000:
                 return self.respond(413, b'{"error":"Request must be between 1 byte and 2 MB"}')
             data = json.loads(self.rfile.read(size))
+            if self.path == '/api/connect':
+                if not isinstance(data, dict):
+                    raise ValueError('Expected a JSON object')
+                return self.respond(200, json.dumps(connect_cluster(data)).encode('utf-8'))
             rows = run_scan(data)
             self.respond(200, json.dumps({'rows': rows}).encode())
         except (ValueError, OSError, subprocess.SubprocessError) as error:

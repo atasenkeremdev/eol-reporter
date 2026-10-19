@@ -5,3 +5,4 @@ reports/
 .env
 .env.*
 !.env.example
+.local/

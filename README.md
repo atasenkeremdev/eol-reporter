@@ -118,3 +118,28 @@ service. HTTPS and authentication are required before a shared deployment.
 The test suite exercises HTTP page delivery, request protection, saved-inventory
 scans through the CLI subprocess, errors, and dotenv loading. Live cluster and
 Azure OpenAI validation still require your credentials and network access.
+
+### Automatic context and AKS discovery
+
+The UI automatically loads local kubeconfig context names at startup, selects
+the current context, and offers a refresh button. It also loads enabled Azure
+subscriptions from the existing Azure CLI session. In **Discover AKS clusters
+from Azure**, select a subscription and cluster, then choose **Connect cluster**.
+The default Azure subscription is selected automatically when available.
+
+Azure discovery requires `az login`, permission to list AKS clusters, and permission
+to retrieve the selected cluster's credentials. Install `kubectl` and `kubelogin`
+for Entra-enabled AKS clusters. If `kubelogin` is available, the generated context
+is converted to Azure CLI authentication. Missing tools or sign-in errors appear
+in the UI; saved-inventory scans remain available.
+
+Downloaded credentials are stored in the ignored `.local/kubeconfig` file with
+owner-only permissions on POSIX systems and merged with the existing kubeconfig
+for UI scans. Existing kubeconfig files and their current context are not changed.
+On Windows, restrict access to `.local` using filesystem permissions. Context
+names are returned to the browser; kubeconfig credentials are not.
+
+HTML, input files, subprocess output, and CLI streams use explicit UTF-8 encoding
+to avoid dependence on platform code pages. UTF-8 BOMs are accepted in `.env`,
+company context, and inventory files. UI symbols use HTML entities or JavaScript
+Unicode escapes so the page source remains ASCII-safe.

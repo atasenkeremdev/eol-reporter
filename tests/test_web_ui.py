@@ -32,6 +32,14 @@ class EnvironmentTests(unittest.TestCase):
                 load_env(path)
         self.assertNotIn('VALID', os.environ)
 
+    @patch.dict(os.environ, {}, clear=True)
+    def test_utf8_bom_environment_file(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / '.env'
+            path.write_bytes(b'\xef\xbb\xbfCOMPANY=caf\xc3\xa9\n')
+            load_env(path)
+        self.assertEqual(os.environ['COMPANY'], 'caf\u00e9')
+
 
 class WebTests(unittest.TestCase):
     @classmethod
@@ -88,3 +96,29 @@ class WebTests(unittest.TestCase):
     def test_invalid_request_types_rejected(self):
         status, _ = self.request('POST', '/api/scan', '[]', {'X-CSRF-Token': 'test-token'})
         self.assertEqual(status, 400)
+
+    @patch('web_ui.list_contexts')
+    def test_context_endpoint_requires_token_and_returns_discovery(self, contexts):
+        self.assertEqual(self.request('GET', '/api/contexts')[0], 403)
+        contexts.return_value = {'contexts': ['dev', 'prod'], 'current_context': 'prod'}
+        status, body = self.request('GET', '/api/contexts', headers={'X-CSRF-Token': 'test-token'})
+        self.assertEqual(status, 200)
+        self.assertEqual(json.loads(body)['current_context'], 'prod')
+
+    @patch('web_ui.list_subscriptions', side_effect=ValueError('Sign in to Azure'))
+    def test_discovery_errors_are_visible(self, subscriptions):
+        status, body = self.request('GET', '/api/subscriptions', headers={'X-CSRF-Token': 'test-token'})
+        self.assertEqual(status, 400)
+        self.assertEqual(json.loads(body)['error'], 'Sign in to Azure')
+
+    def test_utf8_scan_survives_non_ascii_namespace(self):
+        # Synthetic metadata exercises encoding even though Kubernetes names are ASCII.
+        document = {'items': [{'kind': 'Pod', 'metadata': {'name': 'web', 'namespace': 'caf\u00e9'},
+            'spec': {'containers': [{'name': 'web', 'image': 'nginx:1'}]},
+            'status': {'phase': 'Running', 'containerStatuses': [
+                {'name': 'web', 'state': {'running': {}}}]}}]}
+        status, body = self.request('POST', '/api/scan', json.dumps({
+            'inventory_json': json.dumps(document, ensure_ascii=False), 'inventory_only': True}),
+            {'X-CSRF-Token': 'test-token'})
+        self.assertEqual(status, 200, body)
+        self.assertEqual(json.loads(body)['rows'][0]['namespace'], 'caf\u00e9')

@@ -88,7 +88,7 @@ def main(argv=None):
     try:
         load_env(args.env_file)
         if args.input:
-            with open(args.input) as stream:
+            with open(args.input, encoding='utf-8-sig') as stream:
                 document = json.load(stream)
         else:
             command = ['kubectl']
@@ -96,7 +96,7 @@ def main(argv=None):
                 command += ['--context', args.context]
             command += ['get', 'pods,replicasets.apps,jobs.batch', '-o', 'json']
             command += ['--namespace', args.namespace] if args.namespace else ['--all-namespaces']
-            result = subprocess.run(command, capture_output=True, text=True, timeout=90, check=True)
+            result = subprocess.run(command, capture_output=True, text=True, encoding='utf-8', timeout=90, check=True)
             document = json.loads(result.stdout)
         if not isinstance(document, dict) or not isinstance(document.get('items'), list):
             raise ValueError('Input must be a Kubernetes List with an items array')
@@ -104,7 +104,7 @@ def main(argv=None):
         if not args.inventory_only:
             company_context = ''
             if args.company_context:
-                with open(args.company_context) as stream:
+                with open(args.company_context, encoding='utf-8-sig') as stream:
                     company_context = stream.read()
             decisions = classify_images([row['image'] for row in rows], company_context, args.batch_size)
             for row in rows:
@@ -131,4 +131,6 @@ def main(argv=None):
 
 
 if __name__ == '__main__':
+    sys.stdout.reconfigure(encoding='utf-8')
+    sys.stderr.reconfigure(encoding='utf-8')
     sys.exit(main())

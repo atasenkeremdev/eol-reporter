@@ -2,27 +2,35 @@
 <html lang="en">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Image Observatory · AKS image reporter</title>
+<title>Image Observatory &#183; AKS image reporter</title>
 <style>
 :root{color-scheme:dark;--bg:#0c121b;--panel:#141e2b;--line:#29384b;--muted:#9cacc0;--text:#edf4fc;--accent:#66e0bd}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:15px/1.6 system-ui,sans-serif}header{padding:22px 5%;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center}.brand{font-weight:700;letter-spacing:-.5px;font-size:20px}.brand span{color:var(--accent)}.tag{font-size:12px;color:var(--muted);border:1px solid var(--line);padding:4px 12px;border-radius:30px}main{max-width:1440px;margin:auto;padding:36px 5%}h1{font-size:32px;letter-spacing:-1px;margin:0 0 8px}p{margin:0 0 24px;color:var(--muted)}.layout{display:grid;grid-template-columns:310px minmax(0,1fr);gap:24px}.layout>*{min-width:0}.panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:22px}h2{font-size:17px;margin:0 0 18px}label{display:block;font-size:13px;margin-bottom:16px;color:var(--muted)}input,select,textarea{width:100%;background:#0d1520;border:1px solid #35465b;border-radius:7px;color:var(--text);padding:10px;font:inherit;margin-top:6px}textarea{resize:vertical;min-height:90px}input:focus,select:focus,textarea:focus{outline:2px solid var(--accent)}button{border:0;border-radius:7px;padding:11px 16px;font:600 14px system-ui;cursor:pointer;background:var(--accent);color:#08281f}button:disabled{opacity:.45;cursor:wait}.primary{width:100%}.checkbox{display:flex;align-items:center;gap:8px}.checkbox input{width:auto;margin:0}.note{font-size:12px;margin:14px 0 0}.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px}.card{padding:16px;border:1px solid var(--line);border-radius:10px;background:var(--panel)}.card strong{font-size:30px;display:block}.card span{font-size:12px;color:var(--muted)}.toolbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:16px}.toolbar input{flex:1;min-width:140px}.toolbar select{width:150px}.toolbar input,.toolbar select{margin:0}.secondary{background:transparent;color:var(--text);border:1px solid var(--line)}.table-wrap{overflow:auto}table{width:100%;border-collapse:collapse;font-size:13px;text-align:left}th{color:var(--muted);font-weight:500}td,th{padding:14px 10px;border-bottom:1px solid var(--line);vertical-align:top}td{max-width:350px;overflow-wrap:anywhere}.badge{display:inline-block;border-radius:4px;padding:2px 7px;font-size:11px;white-space:nowrap;background:#243346}.third_party{color:#ffd395;background:#3a3023}.internal{color:#89e2c5;background:#183c33}.unknown{color:#c4b5fd;background:#302b48}.detail{font-size:12px;color:var(--muted);margin-top:4px}#status{padding:12px 0;color:var(--muted);font-size:13px}#status.error{color:#ffb4b4}.empty{text-align:center;padding:60px 20px;color:var(--muted)}details{margin-bottom:16px}summary{cursor:pointer;color:var(--muted);font-size:13px}a{color:var(--accent)}@media(max-width:900px){.layout{grid-template-columns:1fr}.cards{gap:6px}header{gap:12px}.tag{display:none}main{padding:24px 4%}}
 </style>
 </head>
 <body>
-<header><div class="brand"><span>◈</span> Image Observatory</div><span class="tag">AKS · Read-only inventory</span></header>
+<header><div class="brand"><span>&#9672;</span> Image Observatory</div><span class="tag">AKS &#183; Read-only inventory</span></header>
 <main><h1>Know what runs in your cluster.</h1><p>Discover container images and identify third-party software with Azure OpenAI.</p>
 <div class="layout">
 <form id="scan-form" class="panel"><h2>Scan configuration</h2>
-<label>Kubernetes context<input id="context" placeholder="Current kubeconfig context" autocomplete="off"></label>
+<label>Kubernetes context<select id="context" disabled><option value="">Loading contexts...</option></select></label>
+<button id="refresh-contexts" class="secondary" type="button">Refresh contexts</button>
+<div id="context-status" class="detail" role="status"></div>
+<details id="azure-discovery"><summary>Discover AKS clusters from Azure</summary>
+<label>Azure subscription<select id="subscription" disabled><option value="">Loading subscriptions...</option></select></label>
+<label>AKS cluster<select id="cluster" disabled><option value="">Select a subscription first</option></select></label>
+<button id="connect-cluster" class="secondary" type="button" disabled>Connect cluster</button>
+<button id="refresh-azure" class="secondary" type="button">Refresh Azure</button>
+<div id="azure-status" class="detail" role="status"></div></details>
 <label>Namespace<input id="namespace" placeholder="All namespaces" autocomplete="off"></label>
 <label>Company context<textarea id="company-context" placeholder="Describe your company's products and naming conventions."></textarea></label>
 <details><summary>Use a saved inventory</summary><label>Kubernetes List JSON file<input id="file" type="file" accept=".json,application/json"></label><div class="detail">Leave empty to scan your cluster. Maximum request size: 2 MB.</div></details>
-<label class="checkbox"><input type="checkbox" id="inventory-only"> Inventory only · skip AI classification</label>
-<button id="scan" class="primary" type="submit">Run image scan →</button>
+<label class="checkbox"><input type="checkbox" id="inventory-only"> Inventory only &#183; skip AI classification</label>
+<button id="scan" class="primary" type="submit">Run image scan &#8594;</button>
 <p class="note">Azure settings are loaded from the server's .env file. Image references and company context are sent to your Azure OpenAI endpoint when AI classification is enabled.</p>
 </form>
 <section aria-label="Inventory results">
-<div class="cards"><div class="card"><strong id="third-party-count">—</strong><span>THIRD-PARTY IMAGES</span></div><div class="card"><strong id="internal-count">—</strong><span>INTERNAL IMAGES</span></div><div class="card"><strong id="unknown-count">—</strong><span>UNKNOWN IMAGES</span></div></div>
-<div class="panel"><h2>Image inventory</h2><div class="toolbar"><input id="search" aria-label="Search inventory" placeholder="Search image, namespace or workload…"><select id="category" aria-label="Filter category"><option value="all">All categories</option><option value="third_party">Third party</option><option value="internal">Internal</option><option value="unknown">Unknown</option></select><button id="download" class="secondary" disabled>Export JSON</button></div>
+<div class="cards"><div class="card"><strong id="third-party-count">&#8212;</strong><span>THIRD-PARTY IMAGES</span></div><div class="card"><strong id="internal-count">&#8212;</strong><span>INTERNAL IMAGES</span></div><div class="card"><strong id="unknown-count">&#8212;</strong><span>UNKNOWN IMAGES</span></div></div>
+<div class="panel"><h2>Image inventory</h2><div class="toolbar"><input id="search" aria-label="Search inventory" placeholder="Search image, namespace or workload&#8230;"><select id="category" aria-label="Filter category"><option value="all">All categories</option><option value="third_party">Third party</option><option value="internal">Internal</option><option value="unknown">Unknown</option></select><button id="download" class="secondary" disabled>Export JSON</button></div>
 <div id="status" role="status" aria-live="polite">Ready to scan. No cluster data has been loaded.</div>
 <div class="table-wrap"><table id="table" hidden><thead><tr><th>Image / classification</th><th>Namespace / workload</th><th>Containers</th><th>Reason</th></tr></thead><tbody id="results"></tbody></table></div>
 <div id="empty" class="empty">Run a scan or select a saved Kubernetes inventory to get started.</div>
@@ -32,6 +40,49 @@
 const token = '__CSRF_TOKEN__';
 const $ = id => document.getElementById(id);
 let rows = [], hasScanned = false;
+let clusters = [];
+async function api(path, data){
+ const response=await fetch(path,{method:data?'POST':'GET',headers:{'Content-Type':'application/json','X-CSRF-Token':token},...(data?{body:JSON.stringify(data)}:{})});
+ const result=await response.json();if(!response.ok)throw new Error(result.error||'Request failed');return result;
+}
+function fillOptions(id, entries, placeholder){
+ const select=$(id);select.replaceChildren(new Option(placeholder,''));
+ for(const entry of entries)select.add(new Option(entry.label,entry.value));select.disabled=!entries.length;
+}
+async function loadContexts(preferred){
+ const previous=preferred||$('context').value;$('context-status').textContent='Loading local kubeconfig contexts...';$('refresh-contexts').disabled=true;
+ try{const data=await api('/api/contexts');fillOptions('context',data.contexts.map(name=>({label:name,value:name})),'Select a context');
+ const chosen=[previous,data.current_context].find(name=>data.contexts.includes(name));if(chosen)$('context').value=chosen;
+ $('context-status').textContent=data.contexts.length?data.contexts.length+' contexts loaded. Scans use the selected context without switching your global context.':'No contexts found. Discover an AKS cluster below or configure kubeconfig.';
+ }catch(error){fillOptions('context',[],'Contexts unavailable');$('context-status').textContent=error.message+'. Saved inventory scans are still available.';}finally{$('refresh-contexts').disabled=false;}
+}
+async function loadSubscriptions(){
+ $('azure-status').textContent='Loading Azure subscriptions...';$('refresh-azure').disabled=true;clusters=[];$('connect-cluster').disabled=true;fillOptions('cluster',[],'Select a subscription first');fillOptions('subscription',[],'Loading subscriptions...');
+ try{const data=await api('/api/subscriptions');fillOptions('subscription',data.subscriptions.map(item=>({label:item.name,value:item.id})),'Select a subscription');
+ $('azure-status').textContent=data.subscriptions.length?'Select a subscription to discover AKS clusters.':'No enabled subscriptions. Run az login, then refresh.';
+ const selected=data.subscriptions.find(item=>item.is_default);if(selected){$('subscription').value=selected.id;await loadClusters();}
+ }catch(error){$('azure-status').textContent=error.message+'. Sign in with az login, then refresh.';fillOptions('subscription',[],'Azure unavailable');}finally{$('refresh-azure').disabled=false;}
+}
+async function loadClusters(){
+ const subscription=$('subscription').value;clusters=[];$('connect-cluster').disabled=true;fillOptions('cluster',[],'Loading clusters...');
+ if(!subscription){fillOptions('cluster',[],'Select a subscription first');return;}
+ $('subscription').disabled=true;$('azure-status').textContent='Discovering AKS clusters...';
+ try{const data=await api('/api/clusters?subscription='+encodeURIComponent(subscription));clusters=data.clusters;
+ fillOptions('cluster',clusters.map((item,index)=>({label:item.name+' / '+item.resource_group,value:String(index)})),'Select a cluster');
+ $('azure-status').textContent=clusters.length?clusters.length+' clusters found.':'No AKS clusters in this subscription.';
+ }catch(error){fillOptions('cluster',[],'Clusters unavailable');$('azure-status').textContent=error.message;}finally{$('subscription').disabled=false;}
+}
+$('refresh-contexts').addEventListener('click',()=>loadContexts());
+$('refresh-azure').addEventListener('click',loadSubscriptions);
+$('subscription').addEventListener('change',loadClusters);
+$('cluster').addEventListener('change',()=>{$('connect-cluster').disabled=$('cluster').value==='';});
+$('connect-cluster').addEventListener('click',async()=>{
+ const cluster=clusters[Number($('cluster').value)];if(!cluster)return;
+ $('connect-cluster').disabled=true;$('azure-status').textContent='Loading cluster credentials...';
+ try{const data=await api('/api/connect',{subscription:$('subscription').value,...cluster});await loadContexts(data.context);$('azure-status').textContent='Context loaded. Ready to scan.';}
+ catch(error){$('azure-status').textContent=error.message;}finally{$('connect-cluster').disabled=$('cluster').value==='';}
+});
+loadContexts();loadSubscriptions();
 function filteredRows(){const query=$('search').value.toLowerCase(),category=$('category').value;return rows.filter(r=>(category==='all'||r.category===category)&&[r.image,r.namespace,r.workload].some(v=>v.toLowerCase().includes(query)));}
 function render(){
  const visible=filteredRows();$('results').replaceChildren();$('table').hidden=!visible.length;$('empty').hidden=!!visible.length;
@@ -40,16 +91,16 @@ function render(){
  const image=document.createElement('td'),name=document.createElement('div');name.textContent=row.image;image.append(name);
  const badge=document.createElement('span');badge.className='badge '+row.category;badge.textContent=row.category.replace('_',' ');image.append(badge);
  const workload=document.createElement('td');workload.textContent=row.namespace;const detail=document.createElement('div');detail.className='detail';detail.textContent=row.workload_kind+'/'+row.workload;workload.append(detail);
- const count=document.createElement('td');count.textContent=row.container_count+' · '+row.container_type;
+ const count=document.createElement('td');count.textContent=row.container_count+' \u00b7 '+row.container_type;
  const reason=document.createElement('td');reason.textContent=row.classification_reason;tr.append(image,workload,count,reason);$('results').append(tr);}
  $('download').disabled=!visible.length;
 }
-$('scan-form').addEventListener('submit',async event=>{event.preventDefault();$('scan').disabled=true;$('status').className='';$('status').textContent='Scanning… Cluster access and AI classification may take several minutes.';rows=[];hasScanned=false;render();$('empty').textContent='Scan in progress…';for(const id of ['third-party-count','internal-count','unknown-count'])$(id).textContent='—';
- try{const file=$('file').files[0];if(file&&file.size>1900000)throw new Error('Inventory file is too large. Select a smaller namespace export.');
+$('scan-form').addEventListener('submit',async event=>{event.preventDefault();$('scan').disabled=true;$('status').className='';$('status').textContent='Scanning\u2026 Cluster access and AI classification may take several minutes.';rows=[];hasScanned=false;render();$('empty').textContent='Scan in progress\u2026';for(const id of ['third-party-count','internal-count','unknown-count'])$(id).textContent='\u2014';
+ try{const file=$('file').files[0];if(!file&&!$('context').value)throw new Error('Select a Kubernetes context or upload a saved inventory.');if(file&&file.size>1900000)throw new Error('Inventory file is too large. Select a smaller namespace export.');
  const response=await fetch('/api/scan',{method:'POST',headers:{'Content-Type':'application/json','X-CSRF-Token':token},body:JSON.stringify({context:$('context').value.trim(),namespace:$('namespace').value.trim(),company_context:$('company-context').value,inventory_json:file?await file.text():'',inventory_only:$('inventory-only').checked})});
  const body=await response.json();if(!response.ok)throw new Error(body.error||'Scan failed');rows=body.rows;hasScanned=true;
  for(const [category,id] of [['third_party','third-party-count'],['internal','internal-count'],['unknown','unknown-count']])$(id).textContent=new Set(rows.filter(r=>r.category===category).map(r=>r.image)).size;
- $('status').textContent='Scan complete · '+rows.length+' workload/image groups · '+new Set(rows.map(r=>r.image)).size+' unique images';render();
+ $('status').textContent='Scan complete \u00b7 '+rows.length+' workload/image groups \u00b7 '+new Set(rows.map(r=>r.image)).size+' unique images';render();
  }catch(error){$('status').className='error';$('status').textContent=error.message;$('empty').textContent='Scan failed. Check configuration and try again.';}finally{$('scan').disabled=false;}});
 $('search').addEventListener('input',render);$('category').addEventListener('change',render);
 $('download').addEventListener('click',()=>{const url=URL.createObjectURL(new Blob([JSON.stringify(filteredRows(),null,2)],{type:'application/json'}));const link=document.createElement('a');link.href=url;link.download='image-inventory.json';link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);});
