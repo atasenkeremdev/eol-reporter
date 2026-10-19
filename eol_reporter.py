@@ -76,6 +76,7 @@ def inventory(document):
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--env-file', default=str(DEFAULT_ENV), help='Environment file (default: project .env)')
+    parser.add_argument('--check-azure', action='store_true', help='Test Azure classification with one public image; no cluster access')
     parser.add_argument('--input', help='Read a Kubernetes List JSON file instead of a cluster')
     parser.add_argument('--company-context', help='Company ownership context text file for the model')
     parser.add_argument('--inventory-only', action='store_true', help='Skip Azure OpenAI; all images remain unknown')
@@ -87,6 +88,12 @@ def main(argv=None):
     args = parser.parse_args(argv)
     try:
         load_env(args.env_file)
+        if args.check_azure:
+            decisions = classify_images(['docker.io/library/nginx:latest'])
+            json.dump({'status': 'ok', 'message': 'Azure OpenAI classification request succeeded',
+                       'classification': decisions['docker.io/library/nginx:latest']}, sys.stdout, indent=2)
+            print()
+            return 0
         if args.input:
             with open(args.input, encoding='utf-8-sig') as stream:
                 document = json.load(stream)

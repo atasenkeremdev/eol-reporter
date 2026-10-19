@@ -27,6 +27,8 @@ are not evaluated or expanded.
 | `AZURE_OPENAI_DEPLOYMENT` | Model deployment supporting chat completions and JSON mode |
 | `AZURE_OPENAI_API_KEY` | Azure OpenAI API key; inject as a secret |
 | `AZURE_OPENAI_API_VERSION` | Optional; defaults to `2024-10-21` |
+| `AZURE_OPENAI_TIMEOUT_SECONDS` | Optional request timeout, defaults to `90`; maximum `300` |
+| `AZURE_OPENAI_CA_BUNDLE` | Optional trusted PEM CA bundle for corporate TLS inspection |
 
 Do not put the key in source code or command-line arguments. The application uses
 an existing Azure resource; it does not create resources or deployments.
@@ -143,3 +145,38 @@ HTML, input files, subprocess output, and CLI streams use explicit UTF-8 encodin
 to avoid dependence on platform code pages. UTF-8 BOMs are accepted in `.env`,
 company context, and inventory files. UI symbols use HTML entities or JavaScript
 Unicode escapes so the page source remains ASCII-safe.
+
+## Troubleshooting Azure OpenAI connectivity
+
+Run this command on the same machine and with the same environment file as the UI:
+
+```bash
+python eol_reporter.py --check-azure
+# Or select an explicit configuration file:
+python eol_reporter.py --env-file /path/to/settings.env --check-azure
+```
+
+This sends one small classification request for a public nginx image and may incur
+a small charge. It does not access Kubernetes or send company inventory. Success
+confirms the configured endpoint, deployment, authentication, and classification
+response work for that request. Larger scans can still encounter limits.
+
+Connection errors distinguish DNS, TLS certificate verification, handshake,
+connection refusal, interruption, routing, and timeouts. Raw exception text is
+not displayed because proxy URLs can include credentials.
+
+- **DNS failure:** verify the resource hostname and proxy hostname. For a private
+  endpoint, connect the required VPN and ensure private DNS is available.
+- **TLS certificate failure:** obtain your organization's trusted PEM CA bundle
+  and set `AZURE_OPENAI_CA_BUNDLE`. TLS verification remains enabled.
+- **Timeout/refusal/routing failure:** check VPN, resource networking, firewall,
+  and corporate proxy access. Python respects `HTTPS_PROXY` and `NO_PROXY`;
+  configure them according to your network policy, without bypassing required
+  proxies. Increase the timeout only if the endpoint is reachable but slow.
+- **HTTP 401/403:** check the API key/resource pairing, permissions, and resource
+  network restrictions. **404:** check deployment and API version. **429:** check
+  quota/rate limits and retry later.
+
+Restart `web_ui.py` after updating `.env`. Existing process variables override
+file values, so make sure a stale exported endpoint or proxy is not taking
+precedence. Do not share API keys or proxy credentials when reporting errors.
