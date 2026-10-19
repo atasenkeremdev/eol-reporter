@@ -9,6 +9,18 @@ additional Python packages.
 
 Set the following environment variables in your runtime environment:
 
+Alternatively, copy `.env.example` to `.env` in the project root and fill in your
+settings. Both the CLI and web UI load this file automatically, regardless of the
+working directory. Existing process environment variables take precedence.
+The `.env` file is ignored by Git. Keep credentials out of `.env.example`.
+Use `--env-file /path/to/settings.env` to select another file. Restart the web UI
+after changing settings.
+
+The supported file format is one `NAME=value` assignment per line, with optional
+`export`, surrounding single/double quotes, blank lines, and full-line comments.
+Shell commands, variable interpolation, multiline values, and inline comments
+are not evaluated or expanded.
+
 | Variable | Description |
 | --- | --- |
 | `AZURE_OPENAI_ENDPOINT` | Resource base HTTPS URL, e.g. `https://YOUR-RESOURCE.openai.azure.com` |
@@ -79,3 +91,30 @@ type, container count, pod names, and runtime image IDs.
 
 Tests mock Azure HTTP calls; they do not validate live AKS or Azure access.
 EOL and vulnerability analysis are outside the current scope.
+
+## Web UI
+
+```bash
+cp .env.example .env
+# Edit .env with your Azure OpenAI settings, then start the UI.
+python web_ui.py
+```
+
+Open `http://127.0.0.1:8080` on the machine running the application. Change the
+port with `python web_ui.py --port 8081`. The UI provides context and namespace
+inputs, optional company context, saved Kubernetes List JSON upload, an inventory
+only mode, unique-image counts, search, category filters, classification reasons,
+and JSON export of the filtered results. Requests are limited to 2 MB. Saved
+inventories are scanned as supplied; context and namespace only affect live scans.
+
+Credentials stay on the server and are not returned to the browser. Temporary
+uploaded inventories and company context files are removed after each scan.
+Results remain in the page until a new scan or reload; there is no database.
+The server handles one scan at a time, with a maximum scan time of ten minutes.
+It binds only to loopback and uses request tokens and Host validation. This is a
+local development UI without user authentication; do not expose it as a public
+service. HTTPS and authentication are required before a shared deployment.
+
+The test suite exercises HTTP page delivery, request protection, saved-inventory
+scans through the CLI subprocess, errors, and dotenv loading. Live cluster and
+Azure OpenAI validation still require your credentials and network access.

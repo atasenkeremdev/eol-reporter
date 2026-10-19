@@ -7,6 +7,7 @@ import subprocess
 import sys
 
 from azure_classifier import classify_images
+from config import DEFAULT_ENV, load_env
 
 
 def canonical_image(image):
@@ -74,6 +75,7 @@ def inventory(document):
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--env-file', default=str(DEFAULT_ENV), help='Environment file (default: project .env)')
     parser.add_argument('--input', help='Read a Kubernetes List JSON file instead of a cluster')
     parser.add_argument('--company-context', help='Company ownership context text file for the model')
     parser.add_argument('--inventory-only', action='store_true', help='Skip Azure OpenAI; all images remain unknown')
@@ -84,6 +86,7 @@ def main(argv=None):
     parser.add_argument('--category', choices=['all', 'third_party', 'internal', 'unknown'], default='all')
     args = parser.parse_args(argv)
     try:
+        load_env(args.env_file)
         if args.input:
             with open(args.input) as stream:
                 document = json.load(stream)

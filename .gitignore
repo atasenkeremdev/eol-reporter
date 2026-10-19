@@ -2,3 +2,6 @@ __pycache__/
 *.pyc
 rules.local.json
 reports/
+.env
+.env.*
+!.env.example
